@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automação ESUS - Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Cabeçalho -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-robot text-blue-500 mr-3"></i>
+                Automação ESUS - Sistema Web
+            </h1>
+            <p class="text-gray-600">Extraia dados de fichas de visita domiciliar automaticamente</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Formulário -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-cog mr-2 text-blue-500"></i>
+                    Configurações de Acesso
+                </h2>
+
+                <form id="automationForm" class="space-y-4">
+                    <!-- URL -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Endereço do servidor:
+                        </label>
+                        <input type="text" id="url" 
+                               value="https://esus.saomanuel.sp.gov.br/"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- CPF -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            CPF (usuário):
+                        </label>
+                        <input type="text" id="user" 
+                               value="36887895803"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Senha -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Senha:
+                        </label>
+                        <input type="password" id="password" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- CNS -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            CNS para pesquisa:
+                        </label>
+                        <div class="flex space-x-2">
+                            <select id="nomeSelect" class="flex-1 px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="">Selecione um nome</option>
+                                {% for nome, cns in lista_sus.items() %}
+                                <option value="{{ cns }}">{{ nome }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" id="cns" 
+                                   placeholder="Ou digite o CNS"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+
+                    <!-- Páginas -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Páginas para extração:
+                        </label>
+                        <input type="text" id="paginas" 
+                               value="1"
+                               placeholder="Ex: 1,3,5-8"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="flex space-x-3 pt-4">
+                        <button type="submit" id="startBtn" 
+                                class="flex-1 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-200">
+                            <i class="fas fa-play mr-2"></i>
+                            Iniciar Automação
+                        </button>
+                        
+                        <button type="button" id="clearBtn"
+                                class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-200">
+                            <i class="fas fa-broom mr-2"></i>
+                            Limpar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Status e Logs -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-terminal mr-2 text-green-500"></i>
+                    Status da Execução
+                </h2>
+
+                <!-- Progresso -->
+                <div class="mb-6">
+                    <div class="flex justify-between mb-1">
+                        <span id="statusText" class="text-sm font-medium text-gray-700">Pronto para iniciar</span>
+                        <span id="progressText" class="text-sm font-medium text-gray-700">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progressBar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Console -->
+                <div class="bg-black rounded-lg p-4 h-64 overflow-y-auto">
+                    <pre id="consoleOutput" class="text-green-400 text-sm font-mono whitespace-pre-wrap"></pre>
+                </div>
+
+                <!-- Resultado -->
+                <div id="resultSection" class="mt-4 hidden">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-green-500 text-xl mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold text-green-800" id="resultTitle"></h3>
+                                <p class="text-green-600 text-sm" id="resultMessage"></p>
+                                <a id="downloadLink" href="#" class="text-blue-500 hover:text-blue-700 text-sm font-medium mt-1 inline-block">
+                                    <i class="fas fa-download mr-1"></i>
+                                    Baixar arquivo Excel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Erro -->
+                <div id="errorSection" class="mt-4 hidden">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold text-red-800">Erro na automação</h3>
+                                <p class="text-red-600 text-sm" id="errorMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elementos DOM
+        const form = document.getElementById('automationForm');
+        const startBtn = document.getElementById('startBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const nomeSelect = document.getElementById('nomeSelect');
+        const cnsInput = document.getElementById('cns');
+        const consoleOutput = document.getElementById('consoleOutput');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const statusText = document.getElementById('statusText');
+        const resultSection = document.getElementById('resultSection');
+        const errorSection = document.getElementById('errorSection');
+
+        // Event Listeners
+        nomeSelect.addEventListener('change', function() {
+            if (this.value) {
+                cnsInput.value = this.value;
+            }
+        });
+
+        clearBtn.addEventListener('click', function() {
+            nomeSelect.value = '';
+            cnsInput.value = '';
+            consoleOutput.textContent = '';
+            hideSections();
+        });
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await startAutomation();
+        });
+
+        // Funções
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            consoleOutput.textContent += `[${timestamp}] ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function updateProgress(percent, message) {
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${percent}%`;
+            if (message) {
+                statusText.textContent = message;
+            }
+        }
+
+        function hideSections() {
+            resultSection.classList.add('hidden');
+            errorSection.classList.add('hidden');
+        }
+
+        function showResult(title, message, downloadUrl = null) {
+            document.getElementById('resultTitle').textContent = title;
+            document.getElementById('resultMessage').textContent = message;
+            
+            if (downloadUrl) {
+                document.getElementById('downloadLink').href = downloadUrl;
+                document.getElementById('downloadLink').classList.remove('hidden');
+            } else {
+                document.getElementById('downloadLink').classList.add('hidden');
+            }
+            
+            resultSection.classList.remove('hidden');
+            errorSection.classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            errorSection.classList.remove('hidden');
+            resultSection.classList.add('hidden');
+        }
+
+        async function startAutomation() {
+            // Coletar dados do formulário
+            const formData = {
+                url: document.getElementById('url').value,
+                user: document.getElementById('user').value,
+                password: document.getElementById('password').value,
+                cns: document.getElementById('cns').value,
+                paginas: parsePageInput(document.getElementById('paginas').value)
+            };
+
+            // Validar
+            if (!formData.cns || !formData.user || !formData.password) {
+                showError('Preencha todos os campos obrigatórios');
+                return;
+            }
+
+            // Configurar UI
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Executando...';
+            hideSections();
+            consoleOutput.textContent = '';
+            updateProgress(0, 'Iniciando...');
+
+            try {
+                logMessage('🚀 Iniciando automação...');
+                updateProgress(10, 'Configurando navegador...');
+
+                // Fazer requisição para o backend
+                const response = await fetch('/start-automation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    updateProgress(100, 'Concluído!');
+                    logMessage('✅ ' + result.message);
+                    showResult('Sucesso!', result.message, result.download_url);
+                } else {
+                    updateProgress(0, 'Erro');
+                    logMessage('❌ ' + result.error);
+                    showError(result.error);
+                }
+
+            } catch (error) {
+                updateProgress(0, 'Erro de conexão');
+                logMessage('❌ Erro: ' + error.message);
+                showError('Erro de conexão com o servidor: ' + error.message);
+            } finally {
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fas fa-play mr-2"></i>Iniciar Automação';
+            }
+        }
+
+        function parsePageInput(input) {
+            const pages = [];
+            const parts = input.split(',');
+            
+            for (let part of parts) {
+                part = part.trim();
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(Number);
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                } else if (part) {
+                    pages.push(Number(part));
+                }
+            }
+            
+            return [...new Set(pages)].sort((a, b) => a - b);
+        }
+
+        // Log inicial
+        logMessage('=== Sistema Inicializado ===');
+        logMessage('Preencha os dados e clique em "Iniciar Automação"');
+    </script>
+</body>
+</html>
