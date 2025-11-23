@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: esus-automation
+    env: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /
